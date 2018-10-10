@@ -125,7 +125,7 @@ class Model:
         self.metrics_names = [metric.__name__ for metric in self.metrics]
         self.device = None
 
-    def fit(self, x, y, validation_x=None, validation_y=None, *,
+    def fit(self, x, y, validation_x=None, validation_y=None, *, shuffle=False,
             batch_size=32, epochs=1000, steps_per_epoch=None, validation_steps=None,
             initial_epoch=1, verbose=True, callbacks=[]):
         """
@@ -184,7 +184,7 @@ class Model:
 
         """
 
-        train_generator = self._dataloader_from_data(x, y, batch_size=batch_size)
+        train_generator = self._dataloader_from_data(x, y, batch_size=batch_size, shuffle=shuffle)
         valid_generator = None
         if validation_x is not None or validation_y is not None:
             valid_generator = self._dataloader_from_data(validation_x,
@@ -200,12 +200,12 @@ class Model:
                                   verbose=verbose,
                                   callbacks=callbacks)
 
-    def _dataloader_from_data(self, *args, batch_size=None):
+    def _dataloader_from_data(self, *args, batch_size=None, shuffle=False):
         assert batch_size is not None, \
             "batch_size should not be None. Please, report this as a bug."
         args = numpy_to_torch(args)
         dataset = TensorDataset(*args) if len(args) > 1 else args[0]
-        generator = DataLoader(dataset, batch_size)
+        generator = DataLoader(dataset, batch_size, shuffle=shuffle)
         return generator
 
     def fit_generator(self, train_generator, valid_generator=None, *,
