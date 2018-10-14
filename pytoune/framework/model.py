@@ -184,6 +184,9 @@ class Model:
 
         """
 
+        if isinstance(x, list):
+            raise Exception("fit() does not support multiple inputs. Use fit_generator")
+
         train_generator = self._dataloader_from_data(x, y, batch_size=batch_size, shuffle=shuffle)
         valid_generator = None
         if validation_x is not None or validation_y is not None:
@@ -594,7 +597,9 @@ class Model:
 
     def _compute_loss_and_metrics(self, x, y, return_loss_tensor=False, return_pred=False):
         x, y = self._process_input(x, y)
-        pred_y = self.model(x)
+        if not isinstance(x, list):
+            x = [x]
+        pred_y = self.model(*x)
         loss = self.loss_function(pred_y, y)
         if not return_loss_tensor:
             loss = float(loss)
