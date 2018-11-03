@@ -117,9 +117,10 @@ class Model:
 
     """
 
-    def __init__(self, model, optimizer, loss_function, *, metrics=[]):
+    def __init__(self, model, optimizer, loss_function, *, lr_scheduler=None, metrics=[]):
         self.model = model
         self.optimizer = get_optimizer(optimizer, self.model)
+        self.lr_scheduler = lr_scheduler
         self.loss_function = get_loss_or_metric(loss_function)
         self.metrics = list(map(get_loss_or_metric, metrics))
         self.metrics_names = [metric.__name__ for metric in self.metrics]
@@ -315,6 +316,9 @@ class Model:
 
             if valid_step_iterator is not None:
                 self._validate(valid_step_iterator)
+
+            if self.lr_scheduler is not None:
+                self.lr_scheduler.step()
 
             epoch_iterator.stop_training = self.stop_training
 
