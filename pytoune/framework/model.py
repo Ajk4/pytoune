@@ -335,6 +335,9 @@ class Model:
         callback.on_backward_end(step)
         self.optimizer.step()
 
+        if self.optimizer is not None and hasattr(self.optimizer, 'batch_step'):
+            self.optimizer.batch_step()
+
         loss = float(loss_tensor)
         return loss, metrics, pred_y
 
