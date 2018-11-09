@@ -21,25 +21,10 @@ class Model:
     Args:
         model (torch.nn.Module): A PyTorch module.
         optimizer (torch.optim.Optimizer): Initialized PyTorch optimizer.
-        loss_function: Loss function. It can be any PyTorch loss layer or
-            custom loss function. It can also be a string with the same name as
-            a PyTorch loss function (either the functional or object name). The
-            loss function must have the signature
-            ``loss_function(input, target)`` where ``input`` is the prediction
-            of the network and ``target`` is the ground truth.
-        metrics (list): List of functions with the same signature as the loss
-            function. Each metric can be any PyTorch loss function. It can also
-            be a string with the same name as a PyTorch loss function (either
-            the functional or object name). 'accuracy' (or just 'acc') is also
-            a valid metric. Each metric function is called on each batch of the
-            optimization and on the validation batches at the end of the epoch.
-            (Default value = [])
 
     Attributes:
         model (torch.nn.Module): The associated PyTorch module.
         optimizer (torch.optim.Optimizer): The associated PyTorch optimizer.
-        loss_function: The associated loss function.
-        metrics (list): The associated metric functions.
 
     Example:
         Using Numpy arrays (or tensors) dataset::
@@ -117,13 +102,10 @@ class Model:
 
     """
 
-    def __init__(self, model, optimizer, loss_function, *, lr_scheduler=None, metrics=[]):
+    def __init__(self, model, optimizer, *, lr_scheduler=None):
         self.model = model
         self.optimizer = get_optimizer(optimizer, self.model)
         self.lr_scheduler = lr_scheduler
-        self.loss_function = get_loss_or_metric(loss_function)
-        self.metrics = list(map(get_loss_or_metric, metrics))
-        self.metrics_names = [metric.__name__ for metric in self.metrics]
         self.device = None
 
     def fit(self, x, y, validation_x=None, validation_y=None, *, shuffle=False,
@@ -302,17 +284,16 @@ class Model:
                                        steps_per_epoch=steps_per_epoch,
                                        validation_steps=validation_steps,
                                        initial_epoch=initial_epoch,
-                                       callback=callback_list,
-                                       metrics_names=self.metrics_names)
+                                       callback=callback_list)
 
         for train_step_iterator, valid_step_iterator in epoch_iterator:
             self.model.train(True)
             with torch.enable_grad():
-                for step, (x, y) in train_step_iterator:
-                    step.loss, step.metrics = self._fit_batch(x, y,
-                                                                 callback=callback_list,
-                                                                 step=step.number)
-                    step.size = self._get_batch_size(x, y)
+                for step, inputs in train_step_iterator:
+                    step.loss, step.metrics = self._fit_batch(inputs,
+                                                              callback=callback_list,
+                                                              step=step.number)
+                    step.size = self._get_batch_size(inputs)
 
             if valid_step_iterator is not None:
                 self._validate(valid_step_iterator)
@@ -327,9 +308,7 @@ class Model:
     def _fit_batch(self, inputs, *, callback=CallbackList(), step=None):
         self.optimizer.zero_grad()
 
-        loss_tensor, metrics = self._compute_loss_and_metrics(
-            x, y, return_loss_tensor=True
-        )
+        loss_tensor, metrics = self.model(*inputs)
 
         loss_tensor.backward()
         callback.on_backward_end(step)
@@ -347,7 +326,7 @@ class Model:
             args = torch_to(args, self.device)
         return args[0] if len(args) == 1 else args
 
-    def train_on_batch(self, x, y):
+    def train_on_batch(self, inputs):
         """
         Trains the model for the batch ``(x, y)`` and computes the loss and
         the metrics, and optionaly returns the predictions.
@@ -372,7 +351,7 @@ class Model:
         self.model.train(True)
         with torch.enable_grad():
             self._transfer_optimizer_state_to_right_device()
-            loss, metrics = self._fit_batch(x, y)
+            loss, metrics = self._fit_batch(inputs)
         return self._format_return(loss, metrics)
 
     def _format_return(self, loss, metrics):
@@ -543,7 +522,7 @@ class Model:
         loss, metrics = self._validate(step_iterator)
         return self._format_return(loss, metrics)
 
-    def evaluate_on_batch(self, x, y):
+    def evaluate_on_batch(self, inputs):
         """
         Computes the loss and the metrics of the network on a single batch of
         samples and optionaly returns the predictions.
@@ -567,41 +546,22 @@ class Model:
         """
         self.model.eval()
         with torch.no_grad():
-            loss, metrics = self._compute_loss_and_metrics(x, y)
+            loss, metrics = self.model(*inputs)
         return self._format_return(loss, metrics)
 
     def _validate(self, step_iterator):
         self.model.eval()
         with torch.no_grad():
-            for step, (x, y) in step_iterator:
-                step.loss, step.metrics = self._compute_loss_and_metrics(
-                    x, y
-                )
-                step.size = self._get_batch_size(x, y)
+            for step, inputs in step_iterator:
+                step.loss, step.metrics = self.model(*inputs)
+                step.size = self._get_batch_size(inputs)
 
         return step_iterator.loss, step_iterator.metrics
 
-    def _compute_loss_and_metrics(self, x, y, return_loss_tensor=False):
-        x, y = self._process_input(x, y)
-        if not isinstance(x, list):
-            x = [x]
-        pred_y = self.model(*x)
-        loss = self.loss_function(pred_y, y)
-        if not return_loss_tensor:
-            loss = float(loss)
-        with torch.no_grad():
-            metrics = self._compute_metrics(pred_y, y)
-
-        return loss, metrics
-
-    def _compute_metrics(self, pred_y, y):
-        return np.array([float(metric(pred_y, y)) for metric in self.metrics])
-
-    def _get_batch_size(self, x, y):
+    def _get_batch_size(self, inputs):
+        x = inputs[0]
         if torch.is_tensor(x) or isinstance(x, np.ndarray):
             return len(x)
-        elif torch.is_tensor(y) or isinstance(y, np.ndarray):
-            return len(y)
         elif warning_settings['batch_size'] == 'warn':
             warnings.warn("When 'x' or 'y' are not tensors nor Numpy arrays, "
                           "the batch size is set to 1 and, thus, the computed "

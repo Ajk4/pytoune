@@ -8,7 +8,6 @@ from .callbacks import Callback
 
 class ProgressionCallback(Callback):
     def on_train_begin(self, logs):
-        self.metrics = ['loss'] + self.model.metrics_names
         self.epochs = self.params['epochs']
         self.steps = self.params['steps']
 
@@ -63,8 +62,17 @@ class ProgressionCallback(Callback):
             self.last_step = batch
 
     def _get_metrics_string(self, logs):
-        train_metrics_str_gen = ('{}: {:f}'.format(k, logs[k])
-                                 for k in self.metrics if logs.get(k) is not None)
-        val_metrics_str_gen = ('{}: {:f}'.format('val_' + k, logs['val_' + k])
-                               for k in self.metrics if logs.get('val_' + k) is not None)
-        return ', '.join(itertools.chain(train_metrics_str_gen, val_metrics_str_gen))
+        train_metrics_str = [f"loss: {'{:f}'.format(logs['loss'])}"]
+        val_metrics_str = []
+
+        if 'val_loss' in logs:
+            val_metrics_str.append(f"val_loss: {'{:f}'.format(logs['val_loss'])}")
+
+        for metric_name, metric_value in logs['metrics'].items():
+            train_metrics_str.append(f"{metric_name}: {'{:f}'.format(metric_value)}")
+
+        if 'val_metrics' in logs:
+            for metric_name, metric_value in logs['val_metrics'].items():
+                val_metrics_str.append(f"val_{metric_name}: {'{:f}'.format(metric_value)}")
+
+        return ', '.join(itertools.chain(train_metrics_str, val_metrics_str))

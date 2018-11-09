@@ -8,14 +8,6 @@ class Logger(Callback):
         self.epoch = 0
 
     def on_train_begin(self, logs):
-        metrics = ['loss'] + self.model.metrics_names
-
-        if self.batch_granularity:
-            self.fieldnames = ['epoch', 'batch', 'size', 'lr']
-        else:
-            self.fieldnames = ['epoch', 'lr']
-        self.fieldnames += metrics
-        self.fieldnames += ['val_' + metric for metric in metrics]
         self._on_train_begin_write(logs)
 
     def _on_train_begin_write(self, logs):
@@ -23,7 +15,6 @@ class Logger(Callback):
 
     def on_batch_end(self, batch, logs):
         if self.batch_granularity:
-            logs = self._get_logs_without_unknown_keys(logs)
             self._on_batch_end_write(batch, logs)
 
     def _on_batch_end_write(self, batch, logs):
@@ -37,7 +28,6 @@ class Logger(Callback):
         pass
 
     def on_epoch_end(self, epoch, logs):
-        logs = self._get_logs_without_unknown_keys(logs)
         self._on_epoch_end_write(epoch, logs)
 
     def _on_epoch_end_write(self, epoch, logs):
@@ -49,53 +39,10 @@ class Logger(Callback):
     def _on_train_end_write(self, logs):
         pass
 
-    def _get_logs_without_unknown_keys(self, logs):
-        return {k:logs[k] for k in self.fieldnames if logs.get(k) is not None}
-
     def _get_current_learning_rates(self):
         learning_rates = [param_group['lr'] for param_group in self.model.optimizer.param_groups]
         return learning_rates[0] if len(learning_rates) == 1 else learning_rates
 
-
-class CSVLogger(Logger):
-    """
-    Callback that output the result of each epoch or batch into a CSV file.
-
-    Args:
-        filename (string): The filename of the CSV.
-        batch_granularity (bool): Whether to also output the result of each
-            batch in addition to the epochs. (Default value = False)
-        separator (string): The separator to use in the CSV.
-            (Default value = ',')
-        append (bool): Whether to append to an existing file.
-
-    """
-    def __init__(self, filename, *, batch_granularity=False, separator=',', append=False):
-        super().__init__(batch_granularity=batch_granularity)
-        self.filename = filename
-        self.separator = separator
-        self.append = append
-
-    def _on_train_begin_write(self, logs):
-        open_flag = 'a' if self.append else 'w'
-        self.csvfile = open(self.filename, open_flag, newline='')
-        self.writer = csv.DictWriter(self.csvfile,
-                                     fieldnames=self.fieldnames,
-                                     delimiter=self.separator)
-        if not self.append:
-            self.writer.writeheader()
-            self.csvfile.flush()
-
-    def _on_batch_end_write(self, batch, logs):
-        self.writer.writerow(logs)
-        self.csvfile.flush()
-
-    def _on_epoch_end_write(self, epoch, logs):
-        self.writer.writerow(dict(logs, lr=self._get_current_learning_rates()))
-        self.csvfile.flush()
-
-    def _on_train_end_write(self, logs=None):
-        self.csvfile.close()
 
 
 class TensorBoardLogger(Logger):
@@ -135,15 +82,18 @@ class TensorBoardLogger(Logger):
         lr = self._get_current_learning_rates()
 
         if isinstance(lr, (list,)):
-            lr_metrics = {'lr_' + str(i): v for i, v in enumerate(lr)}
+            lr_scalars = {'lr_' + str(i): v for i, v in enumerate(lr)}
         else:
-            lr_metrics = {'lr': lr}
+            lr_scalars = {'lr': lr}
 
-        metrics = {
-            **logs,
-            **lr_metrics
+        scalars = {
+            **logs['metrics'],
+            **{'val_' + k: v for k, v in logs['val_metrics'].items()},
+            **lr_scalars,
+            'loss': logs['loss'],
+            'val_loss': logs['val_loss'],
         }
 
-        for metric_name, metric_value in metrics.items():
+        for metric_name, metric_value in scalars.items():
             if metric_name not in ignored_keys:
                 self.writer.add_scalar(metric_name, metric_value, epoch)

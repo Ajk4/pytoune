@@ -15,7 +15,6 @@ from pytoune.framework.callbacks import ModelCheckpoint, \
                                         OptimizerCheckpoint, \
                                         LRSchedulerCheckpoint, \
                                         PeriodicSaveLambda, \
-                                        CSVLogger, \
                                         TensorBoardLogger, \
                                         BestModelRestore
 try:
