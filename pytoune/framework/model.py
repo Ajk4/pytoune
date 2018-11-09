@@ -309,7 +309,7 @@ class Model:
             self.model.train(True)
             with torch.enable_grad():
                 for step, (x, y) in train_step_iterator:
-                    step.loss, step.metrics, _ = self._fit_batch(x, y,
+                    step.loss, step.metrics = self._fit_batch(x, y,
                                                                  callback=callback_list,
                                                                  step=step.number)
                     step.size = self._get_batch_size(x, y)
@@ -324,11 +324,11 @@ class Model:
 
         return epoch_iterator.epoch_logs
 
-    def _fit_batch(self, x, y, *, callback=Callback(), step=None, return_pred=False):
+    def _fit_batch(self, x, y, *, callback=Callback(), step=None):
         self.optimizer.zero_grad()
 
-        loss_tensor, metrics, pred_y = self._compute_loss_and_metrics(
-            x, y, return_loss_tensor=True, return_pred=return_pred
+        loss_tensor, metrics = self._compute_loss_and_metrics(
+            x, y, return_loss_tensor=True
         )
 
         loss_tensor.backward()
@@ -339,7 +339,7 @@ class Model:
             self.optimizer.batch_step()
 
         loss = float(loss_tensor)
-        return loss, metrics, pred_y
+        return loss, metrics
 
     def _process_input(self, *args):
         args = numpy_to_torch(args)
@@ -347,7 +347,7 @@ class Model:
             args = torch_to(args, self.device)
         return args[0] if len(args) == 1 else args
 
-    def train_on_batch(self, x, y, *, return_pred=False):
+    def train_on_batch(self, x, y):
         """
         Trains the model for the batch ``(x, y)`` and computes the loss and
         the metrics, and optionaly returns the predictions.
@@ -355,8 +355,6 @@ class Model:
         Args:
             x: Batch.
             y: Batch ground truths.
-            return_pred (bool, optional): Whether to return the predictions for
-                ``x``. (Default value = False)
 
         Returns:
             Float ``loss`` if no metrics were specified and ``return_pred`` is
@@ -374,16 +372,13 @@ class Model:
         self.model.train(True)
         with torch.enable_grad():
             self._transfer_optimizer_state_to_right_device()
-            loss, metrics, pred_y = self._fit_batch(x, y, return_pred=return_pred)
-        return self._format_return(loss, metrics, pred_y, return_pred)
+            loss, metrics = self._fit_batch(x, y)
+        return self._format_return(loss, metrics)
 
-    def _format_return(self, loss, metrics, pred_y, return_pred):
+    def _format_return(self, loss, metrics):
         ret = (loss,)
 
         ret += tuple(metrics.tolist()) if len(metrics) <= 1 else (metrics,)
-
-        if return_pred:
-            ret += (pred_y,)
 
         return ret[0] if len(ret) == 1 else ret
 
@@ -446,7 +441,7 @@ class Model:
             x = self._process_input(x)
             return torch_to_numpy(self.model(x))
 
-    def evaluate(self, x, y, *, batch_size=32, return_pred=False):
+    def evaluate(self, x, y, *, batch_size=32):
         """
         Computes the loss and the metrics of the network on batches of samples
         and optionaly returns the predictions.
@@ -456,9 +451,6 @@ class Model:
             y (Union[Tensor, np.ndarray]): Dataset ground truths.
             batch_size (int): Number of samples given to the network at one
                 time. (Default value = 32)
-            return_pred (bool, optional): Whether to return the predictions for
-                ``x``. (Default value = False)
-
         Returns:
             Float ``loss`` if no metrics were specified and ``return_pred`` is
             false.
@@ -472,13 +464,11 @@ class Model:
             ``pred_y`` is a Numpy array of the predictions.
         """
         generator = self._dataloader_from_data(x, y, batch_size=batch_size)
-        ret = self.evaluate_generator(generator, steps=len(generator), return_pred=return_pred)
-        if return_pred:
-            ret = (*ret[:-1], np.concatenate(ret[-1]))
+        ret = self.evaluate_generator(generator, steps=len(generator))
         return ret
 
 
-    def evaluate_generator(self, generator, *, steps=None, return_pred=False):
+    def evaluate_generator(self, generator, *, steps=None):
         """
         Computes the loss and the metrics of the network on batches of samples
         and optionaly returns the predictions.
@@ -498,8 +488,6 @@ class Model:
             steps (int, optional): Number of iterations done on
                 ``generator``. (Defaults the number of steps needed to see the
                 entire dataset)
-            return_pred (bool, optional): Whether to return the predictions for
-                ``x``. (Default value = False)
 
         Returns:
             Float ``loss`` if no metrics were specified and ``return_pred`` is
@@ -552,10 +540,10 @@ class Model:
         if steps is None:
             steps = len(generator)
         step_iterator = StepIterator(generator, steps, Callback(), self.metrics_names)
-        loss, metrics, pred_y = self._validate(step_iterator, return_pred=return_pred)
-        return self._format_return(loss, metrics, pred_y, return_pred)
+        loss, metrics = self._validate(step_iterator)
+        return self._format_return(loss, metrics)
 
-    def evaluate_on_batch(self, x, y, *, return_pred=False):
+    def evaluate_on_batch(self, x, y):
         """
         Computes the loss and the metrics of the network on a single batch of
         samples and optionaly returns the predictions.
@@ -563,8 +551,6 @@ class Model:
         Args:
             x (Union[Tensor, np.ndarray]): Batch.
             y (Union[Tensor, np.ndarray]): Batch ground truths.
-            return_pred (bool, optional): Whether to return the predictions for
-                ``x``. (Default value = False)
 
         Returns:
             Float ``loss`` if no metrics were specified and ``return_pred`` is
@@ -581,28 +567,21 @@ class Model:
         """
         self.model.eval()
         with torch.no_grad():
-            loss, metrics, pred_y = self._compute_loss_and_metrics(x, y, return_pred=return_pred)
-        return self._format_return(loss, metrics, pred_y, return_pred)
+            loss, metrics = self._compute_loss_and_metrics(x, y)
+        return self._format_return(loss, metrics)
 
-    def _validate(self, step_iterator, return_pred=False):
-        pred_list = None
-        if return_pred:
-            pred_list = []
-
+    def _validate(self, step_iterator):
         self.model.eval()
         with torch.no_grad():
             for step, (x, y) in step_iterator:
-                step.loss, step.metrics, pred_y = self._compute_loss_and_metrics(
-                    x, y, return_pred=return_pred
+                step.loss, step.metrics = self._compute_loss_and_metrics(
+                    x, y
                 )
-                if return_pred:
-                    pred_list.append(pred_y)
-
                 step.size = self._get_batch_size(x, y)
 
-        return step_iterator.loss, step_iterator.metrics, pred_list
+        return step_iterator.loss, step_iterator.metrics
 
-    def _compute_loss_and_metrics(self, x, y, return_loss_tensor=False, return_pred=False):
+    def _compute_loss_and_metrics(self, x, y, return_loss_tensor=False):
         x, y = self._process_input(x, y)
         if not isinstance(x, list):
             x = [x]
@@ -613,8 +592,7 @@ class Model:
         with torch.no_grad():
             metrics = self._compute_metrics(pred_y, y)
 
-        pred_y = torch_to_numpy(pred_y) if return_pred else None
-        return loss, metrics, pred_y
+        return loss, metrics
 
     def _compute_metrics(self, pred_y, y):
         return np.array([float(metric(pred_y, y)) for metric in self.metrics])

@@ -293,11 +293,10 @@ class ModelTest(TestCase):
     def test_train_on_batch_with_pred(self):
         x = torch.rand(ModelTest.batch_size, 1)
         y = torch.rand(ModelTest.batch_size, 1)
-        loss, metrics, pred_y = self.model.train_on_batch(x, y, return_pred=True)
+        loss, metrics = self.model.train_on_batch(x, y)
         self.assertEqual(type(loss), float)
         self.assertEqual(type(metrics), np.ndarray)
         self.assertEqual(metrics.tolist(), [some_metric_1_value, some_metric_2_value])
-        self.assertEqual(pred_y.shape, (ModelTest.batch_size, 1))
 
     def test_ndarray_train_on_batch(self):
         x = np.random.rand(ModelTest.batch_size, 1).astype(np.float32)
@@ -320,46 +319,34 @@ class ModelTest(TestCase):
         y = torch.rand(ModelTest.evaluate_dataset_len, 1)
         # We also test the unpacking.
         # pylint: disable=unused-variable
-        loss, metrics, pred_y = self.model.evaluate(x, y,
-                                                    batch_size=ModelTest.batch_size,
-                                                    return_pred=True)
-        self.assertEqual(pred_y.shape, (ModelTest.evaluate_dataset_len, 1))
+        loss, metrics = self.model.evaluate(x, y, batch_size=ModelTest.batch_size)
 
     def test_evaluate_with_np_array(self):
         x = np.random.rand(ModelTest.evaluate_dataset_len, 1).astype(np.float32)
         y = np.random.rand(ModelTest.evaluate_dataset_len, 1).astype(np.float32)
-        loss, metrics, pred_y = self.model.evaluate(x, y,
-                                                    batch_size=ModelTest.batch_size,
-                                                    return_pred=True)
+        loss, metrics = self.model.evaluate(x, y, batch_size=ModelTest.batch_size)
         self.assertEqual(type(loss), float)
         self.assertEqual(type(metrics), np.ndarray)
         self.assertEqual(metrics.tolist(), [some_metric_1_value, some_metric_2_value])
-        self.assertEqual(pred_y.shape, (ModelTest.evaluate_dataset_len, 1))
 
     def test_evaluate_data_loader(self):
         x = torch.rand(ModelTest.evaluate_dataset_len, 1)
         y = torch.rand(ModelTest.evaluate_dataset_len, 1)
         dataset = TensorDataset(x, y)
         generator = DataLoader(dataset, ModelTest.batch_size)
-        loss, metrics, pred_y = self.model.evaluate_generator(generator, return_pred=True)
+        loss, metrics = self.model.evaluate_generator(generator)
         self.assertEqual(type(loss), float)
         self.assertEqual(type(metrics), np.ndarray)
         self.assertEqual(metrics.tolist(), [some_metric_1_value, some_metric_2_value])
-        self._test_predictions_for_evaluate_and_predict_generator(pred_y)
 
     def test_evaluate_generator(self):
         num_steps = 10
         generator = some_data_tensor_generator(ModelTest.batch_size)
-        loss, metrics, pred_y = self.model.evaluate_generator(generator,
-                                                              steps=num_steps,
-                                                              return_pred=True)
+        loss, metrics = self.model.evaluate_generator(generator,
+                                                              steps=num_steps)
         self.assertEqual(type(loss), float)
         self.assertEqual(type(metrics), np.ndarray)
         self.assertEqual(metrics.tolist(), [some_metric_1_value, some_metric_2_value])
-        for pred in pred_y:
-            self.assertEqual(type(pred), np.ndarray)
-            self.assertEqual(pred.shape, (ModelTest.batch_size, 1))
-        self.assertEqual(np.concatenate(pred_y).shape, (num_steps * ModelTest.batch_size, 1))
 
     def test_evaluate_with_only_one_metric(self):
         self.model = Model(self.pytorch_module, self.optimizer, self.loss_function,
@@ -405,11 +392,10 @@ class ModelTest(TestCase):
     def test_evaluate_on_batch_with_pred(self):
         x = torch.rand(ModelTest.batch_size, 1)
         y = torch.rand(ModelTest.batch_size, 1)
-        loss, metrics, pred_y = self.model.evaluate_on_batch(x, y, return_pred=True)
+        loss, metrics = self.model.evaluate_on_batch(x, y)
         self.assertEqual(type(loss), float)
         self.assertEqual(type(metrics), np.ndarray)
         self.assertEqual(metrics.tolist(), [some_metric_1_value, some_metric_2_value])
-        self.assertEqual(pred_y.shape, (ModelTest.batch_size, 1))
 
     def test_ndarray_evaluate_on_batch(self):
         x = np.random.rand(ModelTest.batch_size, 1).astype(np.float32)
