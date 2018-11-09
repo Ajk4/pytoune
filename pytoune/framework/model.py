@@ -324,7 +324,7 @@ class Model:
 
         return epoch_iterator.epoch_logs
 
-    def _fit_batch(self, x, y, *, callback=Callback(), step=None):
+    def _fit_batch(self, inputs, *, callback=CallbackList(), step=None):
         self.optimizer.zero_grad()
 
         loss_tensor, metrics = self._compute_loss_and_metrics(
@@ -539,7 +539,7 @@ class Model:
         """
         if steps is None:
             steps = len(generator)
-        step_iterator = StepIterator(generator, steps, Callback(), self.metrics_names)
+        step_iterator = StepIterator(generator, steps, Callback())
         loss, metrics = self._validate(step_iterator)
         return self._format_return(loss, metrics)
 
