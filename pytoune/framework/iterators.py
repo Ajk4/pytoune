@@ -104,8 +104,16 @@ class EpochIterator:
                 'epoch': epoch,
                 'loss': train_step_iterator.loss,
                 'metrics': train_step_iterator.metrics,
-                'val_loss': valid_step_iterator.loss,
-                'val_metrics': valid_step_iterator.metrics}
+            }
+
+            if valid_step_iterator is not None:
+                epoch_log = {
+                    **epoch_log,
+                    'val_loss': valid_step_iterator.loss,
+                    'val_metrics': valid_step_iterator.metrics,
+                }
+
+
             self.callback.on_epoch_end(epoch, epoch_log)
 
             self.epoch_logs.append(epoch_log)
