@@ -163,9 +163,18 @@ class PeriodicSaveCallback(Callback):
         filename = self.filename.format_map(logs)
 
         if self.save_best_only:
-            if self.monitor_op(logs[self.monitor], self.current_best):
+            metric_name = self.monitor
+
+            if metric_name.startswith('val_'):
+                metric_name = metric_name[len('val_'):]
+                metrics = logs['val_metrics']
+            else:
+                metrics = logs['metrics']
+
+            metric_value = metrics[metric_name]
+            if self.monitor_op(metric_value, self.current_best):
                 old_best = self.current_best
-                self.current_best = logs[self.monitor]
+                self.current_best = metric_value
                 self.best_filename = filename
 
                 if self.verbose:
