@@ -7,7 +7,7 @@ I simplified some APIs and reworked them so they support my use-cases.
   * you can't easily create autoencoders. You are expected to give some labels for your data.
 However with autoencoder you are given only data!
 
-    You could work-around, but those workaround break with more advanced scenarios.
+    You could work-around it, but those workaround break with more advanced scenarios.
 
   * you can't export arbitrary metrics that are not based on outputs. Ex:
     * tracking some internal model stats
