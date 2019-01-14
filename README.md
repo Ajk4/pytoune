@@ -32,7 +32,6 @@ Example:
             loss = MSELoss()(y_pred, y_true)
 
             with torch.no_grad():
-                # TODO move float conversion inside model
                 metrics = {
                     'some_metric': ...,
                     'some_arbitrary_metric': ...,
