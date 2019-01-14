@@ -11,6 +11,7 @@ However with autoencoder you are given only data!
 
   * you can't export arbitrary metrics that are not based on outputs. Ex:
     * tracking some internal model stats
+* Also I changed Tensorboard callback so it behaves like its Keras counterpart
     
 
 In my fork you are expected to give Model object pytorch module, thats accepts (possibly multiple) inputs
