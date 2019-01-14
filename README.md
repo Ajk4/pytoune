@@ -1,3 +1,56 @@
+
+# Fork summary
+
+I simplified some APIs and reworked them so they support my use-cases.
+
+* Currently in PyToune:
+  * you can't easily create autoencoders. You are expected to give some labels for your data.
+However with autoencoder you are given only data!
+
+    You could work-around, but those workaround break with more advanced scenarios.
+
+  * you can't export arbitrary metrics that are not based on outputs. Ex:
+    * tracking some internal model stats
+    
+
+In my fork you are expected to give Model object pytorch module, thats accepts (possibly multiple) inputs
+and returns (loss, metrics_dict) tuple.
+
+Example:
+
+```python
+    class TrainableNetwork(nn.Module):
+
+        def __init__(self, net):
+            super().__init__()
+            self.net = net
+
+        def forward(self, x1, y_true):
+            y_pred = self.net(x1)
+
+            loss = MSELoss()(y_pred, y_true)
+
+            with torch.no_grad():
+                # TODO move float conversion inside model
+                metrics = {
+                    'some_metric': ...,
+                    'some_arbitrary_metric': ...,
+                }
+
+            return loss, metrics
+
+    model: Model = Model(
+        TrainableNetwork(net), optimizer=optimizer, lr_scheduler=lr_scheduler
+    ).to(device)
+    
+    (...)
+
+```
+
+With this setup I am no longer constrained when it comes to different network designs.
+
+End of fork comment
+
 # PyToune: Deep Learning framework for [PyTorch](http://pytorch.org/)
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](http://www.gnu.org/licenses/gpl-3.0)
