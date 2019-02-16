@@ -48,9 +48,14 @@ class StepIterator:
                 if metric_name not in self.metric_sum_by_metric_name:
                     self.metric_sum_by_metric_name[metric_name] = 0
                 self.metric_sum_by_metric_name[metric_name] += metric_value * step_data.size
+                
+            accumulated_loss = self.losses_sum / self.sizes_sum
+            accumulated_metrics = {}
+            for metric_name in self.metric_sum_by_metric_name.keys():
+                accumulated_metrics[metric_name] = self.metric_sum_by_metric_name[metric_name] / self.sizes_sum
 
             batch_logs = {'batch': step, 'size': step_data.size,
-                          'loss': step_data.loss, 'metrics': step_data.metrics}
+                          'loss': accumulated_loss, 'metrics': accumulated_metrics}
             self.callback.on_batch_end(step, batch_logs)
 
 class EpochIterator:
