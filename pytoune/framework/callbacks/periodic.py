@@ -171,7 +171,11 @@ class PeriodicSaveCallback(Callback):
             else:
                 metrics = logs['metrics']
 
-            metric_value = metrics[metric_name]
+            if metric_name == 'loss':
+                metric_value = logs['loss'] # TODO Should 'loss' be inside metric dict?
+            else:
+                metric_value = metrics[metric_name]
+
             if self.monitor_op(metric_value, self.current_best):
                 old_best = self.current_best
                 self.current_best = metric_value
