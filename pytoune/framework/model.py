@@ -102,10 +102,11 @@ class Model:
 
     """
 
-    def __init__(self, model, optimizer, *, lr_scheduler=None):
+    def __init__(self, model, optimizer, *, lr_scheduler=None, clip_grad_value=None):
         self.model = model
         self.optimizer = get_optimizer(optimizer, self.model)
         self.lr_scheduler = lr_scheduler
+        self.clip_grad_value = clip_grad_value
         self.device = None
 
     def fit(self, x, y, validation_x=None, validation_y=None, *, shuffle=False,
@@ -311,7 +312,13 @@ class Model:
         loss_tensor, metrics = self.model(*inputs)
 
         loss_tensor.backward()
+        
         callback.on_backward_end(step)
+
+        if self.clip_grad_value:
+            # Ideally parameters from optimizer should be used
+            torch.nn.utils.clip_grad_norm(self.model.parameters(), self.clip_grad_value)
+
         self.optimizer.step()
 
         if self.optimizer is not None and hasattr(self.optimizer, 'batch_step'):
