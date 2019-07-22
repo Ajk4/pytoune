@@ -364,7 +364,7 @@ class Model:
     def _format_return(self, loss, metrics):
         ret = (loss,)
 
-        ret += tuple(metrics.tolist()) if len(metrics) <= 1 else (metrics,)
+        # ret += tuple(metrics.tolist()) if len(metrics) <= 1 else (metrics,)
 
         return ret[0] if len(ret) == 1 else ret
 
