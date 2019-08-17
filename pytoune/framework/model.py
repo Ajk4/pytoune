@@ -102,12 +102,13 @@ class Model:
 
     """
 
-    def __init__(self, model, optimizer, *, lr_scheduler=None, clip_grad_value=None):
+    def __init__(self, model, optimizer, *, lr_scheduler=None, clip_grad_value=None, opt_iter=1):
         self.model = model
         self.optimizer = get_optimizer(optimizer, self.model)
         self.lr_scheduler = lr_scheduler
         self.clip_grad_value = clip_grad_value
         self.device = None
+        self.opt_iter = opt_iter
 
     def fit(self, x, y, validation_x=None, validation_y=None, *, shuffle=False,
             batch_size=32, epochs=1000, steps_per_epoch=None, validation_steps=None,
@@ -279,6 +280,8 @@ class Model:
         callback_list = CallbackList(callbacks)
         callback_list.set_model(self)
 
+        self.optimizer.zero_grad()
+
         self.stop_training = False
         epoch_iterator = EpochIterator(train_generator, valid_generator,
                                        epochs=epochs,
@@ -306,10 +309,10 @@ class Model:
 
         return epoch_iterator.epoch_logs
 
-    def _fit_batch(self, inputs, *, callback=CallbackList(), step=None):
-        self.optimizer.zero_grad()
-
+    def _fit_batch(self, inputs, *, callback=CallbackList(), step):
         loss_tensor, metrics = self.model(*inputs)
+
+        loss_tensor = loss_tensor / self.opt_iter
 
         loss_tensor.backward()
         
@@ -319,7 +322,9 @@ class Model:
             # Ideally parameters from optimizer should be used
             torch.nn.utils.clip_grad_norm(self.model.parameters(), self.clip_grad_value)
 
-        self.optimizer.step()
+        if step % self.opt_iter:
+            self.optimizer.step()
+            self.optimizer.zero_grad()
 
         if self.optimizer is not None and hasattr(self.optimizer, 'batch_step'):
             self.optimizer.batch_step()
