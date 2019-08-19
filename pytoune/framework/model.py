@@ -532,7 +532,7 @@ class Model:
             steps = len(generator)
         step_iterator = StepIterator(generator, steps, Callback())
         loss, metrics = self._validate(step_iterator)
-        return self._format_return(loss, metrics)
+        return loss, metrics
 
     def evaluate_on_batch(self, inputs):
         """
