@@ -322,7 +322,7 @@ class Model:
             # Ideally parameters from optimizer should be used
             torch.nn.utils.clip_grad_norm(self.model.parameters(), self.clip_grad_value)
 
-        if step % self.opt_iter:
+        if step % self.opt_iter == 0:
             self.optimizer.step()
             self.optimizer.zero_grad()
 
