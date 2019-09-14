@@ -273,7 +273,7 @@ class Model:
                 ...
 
         """
-        self._transfer_optimizer_state_to_right_device()
+        # self._transfer_optimizer_state_to_right_device()
 
         if verbose:
             callbacks = [ProgressionCallback()] + callbacks
