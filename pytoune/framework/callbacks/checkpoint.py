@@ -1,7 +1,9 @@
 import warnings
 
-from .periodic import PeriodicSaveCallback
+import torch
+
 from .lr_scheduler import PyTorchLRSchedulerWrapper, ReduceLROnPlateau
+from .periodic import PeriodicSaveCallback
 
 
 class ModelCheckpoint(PeriodicSaveCallback):
@@ -28,7 +30,16 @@ class ModelCheckpoint(PeriodicSaveCallback):
                              "'save_best_only' is also true.")
 
     def save_file(self, fd, epoch, logs):
-        self.model.save_weights(fd)
+        state_dict = {
+            'epoch': epoch,
+            'model_state_dict': self.model.model.state_dict(),
+            'optimizer_state_dict': self.model.optimizer.state_dict(),
+        }
+
+        if self.lr_scheduler:
+            state_dict['lr_scheduler_state_dict'] = self.model.lr_scheduler.state_dict(),
+
+        torch.save(state_dict, fd)
 
     def on_train_end(self, logs):
         if self.restore_best:
@@ -39,24 +50,6 @@ class ModelCheckpoint(PeriodicSaveCallback):
             else:
                 warnings.warn('No  weights to restore!')
 
-class OptimizerCheckpoint(PeriodicSaveCallback):
-    """
-    Save the state of the optimizer after every epoch. The optimizer can be
-    reloaded as follows.
-
-    .. code-block:: python
-
-        model = Model(model, optimizer, loss_function)
-        model.load_optimizer_state(filename)
-
-    See `pytoune.framework.PeriodicSaveCallback` for the arguments'
-    descriptions.
-
-    See:
-        pytoune.framework.PeriodicSaveCallback
-    """
-    def save_file(self, fd, epoch, logs):
-        self.model.save_optimizer_state(fd)
 
 class LRSchedulerCheckpoint(PeriodicSaveCallback):
     """
@@ -79,6 +72,7 @@ class LRSchedulerCheckpoint(PeriodicSaveCallback):
     See:
         pytoune.framework.PeriodicSaveCallback
     """
+
     def __init__(self, lr_scheduler, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.lr_scheduler = lr_scheduler
