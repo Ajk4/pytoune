@@ -12,7 +12,6 @@ import torch
 
 from pytoune.framework import Model
 from pytoune.framework.callbacks import ModelCheckpoint, \
-                                        OptimizerCheckpoint, \
                                         LRSchedulerCheckpoint, \
                                         PeriodicSaveLambda, \
                                         TensorBoardLogger, \
@@ -257,11 +256,6 @@ class Experiment:
                 self.model_checkpoint_filename,
                 verbose=False,
                 temporary_filename=self.model_checkpoint_tmp_filename
-            )]
-            callbacks += [OptimizerCheckpoint(
-                self.optimizer_checkpoint_filename,
-                verbose=False,
-                temporary_filename=self.optimizer_checkpoint_tmp_filename
             )]
 
             # We save the last epoch number after the end of the epoch so that the

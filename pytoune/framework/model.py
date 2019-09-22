@@ -1,13 +1,12 @@
 import warnings
-import numpy as np
 
+import numpy as np
 import torch
 from torch.utils.data import DataLoader, TensorDataset
 
 from pytoune import torch_to_numpy, numpy_to_torch, torch_to
-from .iterators import EpochIterator, StepIterator, _get_step_iterator
 from .callbacks import CallbackList, ProgressionCallback, Callback
-from .metrics import get_loss_or_metric
+from .iterators import EpochIterator, StepIterator, _get_step_iterator
 from .optimizers import get_optimizer
 from .warning_manager import warning_settings
 
@@ -315,7 +314,7 @@ class Model:
         loss_tensor = loss_tensor / self.opt_iter
 
         loss_tensor.backward()
-        
+
         callback.on_backward_end(step)
 
         if step % self.opt_iter == 0:
@@ -362,7 +361,6 @@ class Model:
         """
         self.model.train(True)
         with torch.enable_grad():
-            self._transfer_optimizer_state_to_right_device()
             loss, metrics = self._fit_batch(inputs)
         return self._format_return(loss, metrics)
 
@@ -457,7 +455,6 @@ class Model:
         generator = self._dataloader_from_data(x, y, batch_size=batch_size)
         ret = self.evaluate_generator(generator, steps=len(generator))
         return ret
-
 
     def evaluate_generator(self, generator, *, steps=None):
         """
@@ -628,18 +625,6 @@ class Model:
                 descriptor) or string containing a file name.
         """
         torch.save(self.optimizer.state_dict(), f)
-
-    def _transfer_optimizer_state_to_right_device(self):
-        # Since the optimizer state is loaded on CPU, it will crashed when the
-        # optimizer will receive gradient for parameters not on CPU. Thus, for
-        # each parameter, we transfer its state in the optimizer on the same
-        # device as the parameter itself just before starting the optimization.
-        for group in self.optimizer.param_groups:
-            for p in group['params']:
-                if p in self.optimizer.state:
-                    for _, v in self.optimizer.state[p].items():
-                        if torch.is_tensor(v) and p.device != v.device:
-                            v.data = v.data.to(p.device)
 
     def get_weights(self):
         """
