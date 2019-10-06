@@ -50,15 +50,15 @@ class ModelCheckpoint(PeriodicSaveCallback):
             else:
                 warnings.warn('No  weights to restore!')
 
-    def load(self, pytoune_model):
-        checkpoint = torch.load(self.filename)
+    @staticmethod
+    def load(checkpoint, pytoune_model):
         pytoune_model.model.load_state_dict(checkpoint['model_state_dict'])
         pytoune_model.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
 
         if pytoune_model.lr_scheduler:
             pytoune_model.lr_scheduler.load_state_dict('optimizer_state_dict')
 
-        print(f"Loaded checkpoint {self.filename}")
+        print(f"Loaded checkpoint")
 
 
 class LRSchedulerCheckpoint(PeriodicSaveCallback):
