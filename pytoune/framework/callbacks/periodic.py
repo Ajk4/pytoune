@@ -110,6 +110,9 @@ class PeriodicSaveCallback(Callback):
         self.open_mode = open_mode
         self.best_filename = None
 
+        os.makedirs(os.path.dirname(filename), exist_ok=True)
+        os.makedirs(os.path.dirname(temporary_filename), exist_ok=True)
+
         if self.save_best_only:
             if mode not in ['min', 'max']:
                 raise ValueError("Invalid mode '%s'" % mode)
