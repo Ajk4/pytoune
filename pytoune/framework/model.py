@@ -328,7 +328,7 @@ class Model:
         if self.optimizer is not None and hasattr(self.optimizer, 'batch_step'):
             self.optimizer.batch_step()
 
-        loss = float(loss_tensor)
+        loss = float(loss_tensor) * self.opt_iter
         return loss, metrics
 
     def _process_input(self, *args):
