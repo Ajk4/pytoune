@@ -77,8 +77,6 @@ class TensorBoardLogger(Logger):
         pass
 
     def _on_epoch_end_write(self, epoch, logs):
-        ignored_keys = ['epoch']
-
         lr = self._get_current_learning_rates()
 
         if isinstance(lr, (list,)):
@@ -86,17 +84,16 @@ class TensorBoardLogger(Logger):
         else:
             lr_scalars = {'lr': lr}
 
-        scalars = {
-            **logs['metrics'],
-            **{'val_' + k: v for k, v in logs.get('val_metrics', {}).items()},
-            **lr_scalars,
-            'loss': logs['loss'],
-        }
-        if 'val_loss' in logs:
-            scalars['val_loss'] = logs['val_loss']
+        for metric_name, metric_value in lr_scalars.items():
+            self.writer.add_scalar(f'lr/${metric_name}', metric_value, epoch)
 
-        for metric_name, metric_value in scalars.items():
-            if metric_name not in ignored_keys:
-                self.writer.add_scalar(metric_name, metric_value, epoch)
+        self.writer.add_scalar(f'train/loss', logs['loss'], epoch)
+        for metric_name, metric_value in logs['metrics'].items():
+            self.writer.add_scalar(f'train/${metric_name}', metric_value, epoch)
+
+        if 'val_loss' in logs:
+            self.writer.add_scalar('val/loss', logs['val_loss'], epoch)
+            for metric_name, metric_value in logs['val_metrics'].items():
+                self.writer.add_scalar(f'val/${metric_name}', metric_value, epoch)
 
         self.writer.flush()
