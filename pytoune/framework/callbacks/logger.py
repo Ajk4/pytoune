@@ -98,3 +98,5 @@ class TensorBoardLogger(Logger):
         for metric_name, metric_value in scalars.items():
             if metric_name not in ignored_keys:
                 self.writer.add_scalar(metric_name, metric_value, epoch)
+
+        self.writer.flush()
