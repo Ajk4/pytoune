@@ -88,11 +88,12 @@ class TensorBoardLogger(Logger):
 
         scalars = {
             **logs['metrics'],
-            **{'val_' + k: v for k, v in logs['val_metrics'].items()},
+            **{'val_' + k: v for k, v in logs.get('val_metrics', {}).items()},
             **lr_scalars,
             'loss': logs['loss'],
-            'val_loss': logs['val_loss'],
         }
+        if 'val_loss' in logs:
+            scalars['val_loss'] = logs['val_loss']
 
         for metric_name, metric_value in scalars.items():
             if metric_name not in ignored_keys:
