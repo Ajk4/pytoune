@@ -17,6 +17,7 @@ def _get_step_iterator(steps, generator):
 
 class StepIterator:
     def __init__(self, generator, steps_per_epoch, callback):
+        assert steps_per_epoch > 0
         self.generator = generator
         self.steps_per_epoch = steps_per_epoch
         self.callback = callback
@@ -62,6 +63,8 @@ class EpochIterator:
     def __init__(self, train_generator, valid_generator, *,
                  epochs, steps_per_epoch, validation_steps,
                  initial_epoch=1, callback):
+        assert steps_per_epoch > 0
+
         self.train_generator = train_generator
         self.valid_generator = valid_generator
         self.epochs = epochs
