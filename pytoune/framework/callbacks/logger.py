@@ -85,15 +85,15 @@ class TensorBoardLogger(Logger):
             lr_scalars = {'lr': lr}
 
         for metric_name, metric_value in lr_scalars.items():
-            self.writer.add_scalar(f'lr/${metric_name}', metric_value, epoch)
+            self.writer.add_scalar(f'lr/{metric_name}', metric_value, epoch)
 
         self.writer.add_scalar(f'train/loss', logs['loss'], epoch)
         for metric_name, metric_value in logs['metrics'].items():
-            self.writer.add_scalar(f'train/${metric_name}', metric_value, epoch)
+            self.writer.add_scalar(f'train/{metric_name}', metric_value, epoch)
 
         if 'val_loss' in logs:
             self.writer.add_scalar('val/loss', logs['val_loss'], epoch)
             for metric_name, metric_value in logs['val_metrics'].items():
-                self.writer.add_scalar(f'val/${metric_name}', metric_value, epoch)
+                self.writer.add_scalar(f'val/{metric_name}', metric_value, epoch)
 
         self.writer.flush()
