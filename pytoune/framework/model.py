@@ -276,6 +276,15 @@ class Model:
 
         if verbose:
             callbacks = [ProgressionCallback()] + callbacks
+
+        if steps_per_epoch == 0:
+            warnings.warn("steps_per_epoch == 0. Assuming steps_per_epoch=1 was meant")
+            steps_per_epoch = 1
+
+        if validation_steps == 0:
+            warnings.warn("validation_steps == 0. Assuming validation_steps=1 was meant")
+            validation_steps = 1
+
         callback_list = CallbackList(callbacks)
         callback_list.set_model(self)
 
